@@ -14,6 +14,41 @@ A Python GUI tool for checking proxy quality, fraud risk, geolocation, and netwo
 - 📊 PrettyTable CLI fallback (if GUI is disabled)
 - ⚠️ List of failed proxies displayed after scan
 
+
+## 🔑 Getting an IPQualityScore API Key
+
+To use this tool, you need a free API key from IPQualityScore. Here's how:
+
+1. Go to [https://www.ipqualityscore.com/create-account](https://www.ipqualityscore.com/create-account)
+2. Create a free account using your email
+3. Once logged in, navigate to the [Account Settings/API Keys page](https://www.ipqualityscore.com/user/settings)
+4. Copy your **Default API Key**
+5. Paste it into the tool when prompted or save it in `config.json` like this:
+
+```json
+{
+  "api_key": "your_actual_ipqs_key_here"
+}
+```
+
+🆓 The free plan should be fine — in testing, these queries don’t even drain your free token balance. This could change in the future, but for now it’s a bonus!
+
+
+## 🪟 Windows Users – Precompiled `.exe` Version
+
+If you don’t want to install Python or any dependencies, you can use the precompiled Windows `.exe` version:
+
+1. Download the latest release from the [Releases](https://github.com/zzpixels/zPixProxyScore/releases) page.
+2. Extract the ZIP archive (if applicable).
+3. Double-click `zPixProxyScoreChecker.exe` to launch the app.
+
+### 📝 Notes:
+- No installation is required — just run and use.
+- A `config.json` file will be created in the same folder to store your API key if you choose to save it.
+- Double-click any proxy row to view credentials (port, username, password).
+- You can export results to CSV using the **Export to CSV** button.
+
+
 ## 🧰 Requirements
 
 Install Python 3 and then run:
@@ -35,24 +70,6 @@ git clone https://github.com/zzpixels/zPixProxyScore.git
 cd zPixProxyScore
 pip install -r requirements.txt
 ```
-
-## 🔑 Getting an IPQualityScore API Key
-
-To use this tool, you need a free API key from IPQualityScore. Here's how:
-
-1. Go to [https://www.ipqualityscore.com/create-account](https://www.ipqualityscore.com/create-account)
-2. Create a free account using your email
-3. Once logged in, navigate to the [Account Settings/API Keys page](https://www.ipqualityscore.com/user/settings)
-4. Copy your **Default API Key**
-5. Paste it into the tool when prompted or save it in `config.json` like this:
-
-```json
-{
-  "api_key": "your_actual_ipqs_key_here"
-}
-```
-
-🆓 The free plan should be fine — in testing, these queries don’t even drain your free token balance. This could change in the future, but for now it’s a bonus!
 
 ## 🚀 Usage
 
