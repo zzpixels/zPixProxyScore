@@ -14,6 +14,7 @@ A Python GUI tool for checking proxy quality, fraud risk, geolocation, and netwo
 - 📊 PrettyTable CLI fallback (if GUI is disabled)
 - ⚠️ List of failed proxies displayed after scan
 
+---
 
 ## 🔑 Getting an IPQualityScore API Key
 
@@ -33,6 +34,7 @@ To use this tool, you need a free API key from IPQualityScore. Here's how:
 
 🆓 The free plan should be fine — in testing, these queries don’t even drain your free token balance. This could change in the future, but for now it’s a bonus!
 
+---
 
 ## 🪟 Windows Users – Precompiled `.exe` Version
 
@@ -48,8 +50,11 @@ If you don’t want to install Python or any dependencies, you can use the preco
 - Double-click any proxy row to view credentials (port, username, password).
 - You can export results to CSV using the **Export to CSV** button.
 
+---
 
-## 🧰 Requirements
+## 🐧 Linux / 🧪 Python Source Version
+
+### 🧰 Requirements
 
 Install Python 3 and then run:
 
@@ -63,7 +68,7 @@ If you are on Debian/Ubuntu and encounter issues with `tkinter`:
 sudo apt install python3-tk
 ```
 
-## 📦 Installation
+### 📦 Installation
 
 ```bash
 git clone https://github.com/zzpixels/zPixProxyScore.git
@@ -71,7 +76,7 @@ cd zPixProxyScore
 pip install -r requirements.txt
 ```
 
-## 🚀 Usage
+### 🚀 Usage
 
 Just run:
 
@@ -82,11 +87,15 @@ python script.py
 You'll be prompted to enter:
 
 1. A list of proxies (one per line, format: `IP:PORT:USER:PASS`)
-2. A IPQualityScore API Key (can be saved for future runs)
+2. An IPQualityScore API Key (can be saved for future runs)
+
+---
 
 ## 📝 Config Persistence
 
 Your API key is saved in a `config.json` file in the current directory if you check the “Save API Key” box. This prevents you from needing to re-enter it each time.
+
+---
 
 ## 📊 Output
 
@@ -102,6 +111,8 @@ Rows are color-coded:
 Double-clicking a row opens a popup showing the proxy's credentials and port.
 
 You can also export the results to a `.csv` file using the **Export to CSV** button.
+
+---
 
 ## 📄 License
 
