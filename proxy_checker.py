@@ -82,7 +82,6 @@ def check_proxy(proxy, api_key):
         else:
             failed_proxies.append(proxy)
     except Exception:
-        # Handle any exceptions (timeout, connection error, etc.)
         failed_proxies.append(proxy)
 
 
@@ -99,4 +98,4 @@ def check_proxies_with_threading(proxies, api_key, threads=10):
         # Pass the api_key parameter to each check_proxy call
         futures = [executor.submit(check_proxy, proxy, api_key) for proxy in proxies]
         for future in futures:
-            future.result()  # This ensures any exceptions are raised
+            future.result()

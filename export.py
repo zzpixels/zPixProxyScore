@@ -53,7 +53,7 @@ def open_export_window(tree, results):
     # Create export window
     win = tk.Toplevel()
     win.title("Filter & Export Proxies")
-    win.geometry("950x580")  # slightly taller for status bar
+    win.geometry("950x580")
 
     # Track current sort state
     sort_col = None

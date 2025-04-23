@@ -45,7 +45,8 @@ def display_terminal_table(results):
     table.field_names = ["Proxy IP", "Public IP", "Location", "ISP", "Fraud Score",
                          "Proxy", "VPN", "Tor", "Mobile", "Recent Abuse", "Bot Status"]
     for row in results:
-        table.add_row(row[:-1])  # Exclude the details column
+        # Exclude the details column
+        table.add_row(row[:-1])
     print(table)
 
 

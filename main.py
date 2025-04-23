@@ -37,7 +37,7 @@ def main():
     loading.destroy()
 
     # Display results based on GUI mode setting
-    display_gui_table(results, summary, failed_proxies) if USE_GUI else display_terminal_table(results)
+    display_gui_table(results, summary, failed_proxies)if USE_GUI else display_terminal_table(results)
 
 
 if __name__ == '__main__':

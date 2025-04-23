@@ -131,9 +131,10 @@ def display_gui_table(results, summary, failed_proxies):
             tag = "medium"
         tree.insert('', tk.END, values=row[:-1], tags=(tag,))
 
-    # Configure tag colors
-    tree.tag_configure("high", background="#ffcccc")  # Light red for high risk
-    tree.tag_configure("medium", background="#fff0b3")  # Light yellow for medium risk
+    # Red for high risk
+    tree.tag_configure("high", background="#ffcccc")
+    # Yellow for medium risk
+    tree.tag_configure("medium", background="#fff0b3")
 
     # Create footer with summary information
     footer_frame = ttk.Frame(root)
