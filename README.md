@@ -38,10 +38,10 @@ pip install -r requirements.txt
 
 To use this tool, you need a free API key from IPQualityScore. Here's how:
 
-1. Go to [https://www.ipqualityscore.com/signup](https://www.ipqualityscore.com/signup)
+1. Go to [https://www.ipqualityscore.com/signup](https://www.ipqualityscore.com/create-account)
 2. Create a free account using your email
-3. Once logged in, navigate to the [API Keys page](https://www.ipqualityscore.com/account/overview)
-4. Copy your **Secret API Key** for the **IP Address Reputation API**
+3. Once logged in, navigate to the [Account Settings/API Keys page](https://www.ipqualityscore.com/user/settings)
+4. Copy your **Default API Key**
 5. Paste it into the tool when prompted or save it in `config.json` like this:
 
 ```json
@@ -50,7 +50,7 @@ To use this tool, you need a free API key from IPQualityScore. Here's how:
 }
 ```
 
-The free plan gives you up to 5,000 lookups per month!
+The free plan should be fine, in my testing these type of queries don't even drain your free tokens! This of course could change one day but for now take advantage of it..
 
 
 ## 🚀 Usage
@@ -58,7 +58,7 @@ The free plan gives you up to 5,000 lookups per month!
 Just run:
 
 ```bash
-python app.py
+python script.py
 ```
 
 You'll be prompted to enter:
