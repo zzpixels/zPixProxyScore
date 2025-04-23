@@ -81,7 +81,7 @@ pip install -r requirements.txt
 Just run:
 
 ```bash
-python script.py
+python main.py
 ```
 
 You'll be prompted to enter:
