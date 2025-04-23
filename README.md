@@ -31,8 +31,8 @@ sudo apt install python3-tk
 ## 📦 Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/proxy-checker-gui.git
-cd proxy-checker-gui
+git clone https://github.com/zzpixels/zPixProxyScore.git
+cd zPixProxyScore
 pip install -r requirements.txt
 ```
 
@@ -65,7 +65,7 @@ python script.py
 You'll be prompted to enter:
 
 1. A list of proxies (one per line, format: `IP:PORT:USER:PASS`)
-2. An optional IPQualityScore API Key (can be saved for future runs)
+2. A IPQualityScore API Key (can be saved for future runs)
 
 ## 📝 Config Persistence
 
