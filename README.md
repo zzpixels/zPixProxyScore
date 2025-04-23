@@ -9,7 +9,10 @@ A Python GUI tool for checking proxy quality, fraud risk, geolocation, and netwo
 - 📍 IP Geolocation via IP-API
 - 🚨 Fraud Risk Analysis via IPQualityScore
 - 🧠 Color-coded risk visualizer (red for high risk, yellow for medium)
+- 🖱️ Double-click any row to reveal proxy credentials (username, password, port)
+- 💾 Export results to CSV
 - 📊 PrettyTable CLI fallback (if GUI is disabled)
+- ⚠️ List of failed proxies displayed after scan
 
 ## 🧰 Requirements
 
@@ -33,12 +36,11 @@ cd proxy-checker-gui
 pip install -r requirements.txt
 ```
 
-
 ## 🔑 Getting an IPQualityScore API Key
 
 To use this tool, you need a free API key from IPQualityScore. Here's how:
 
-1. Go to [https://www.ipqualityscore.com/signup](https://www.ipqualityscore.com/create-account)
+1. Go to [https://www.ipqualityscore.com/create-account](https://www.ipqualityscore.com/create-account)
 2. Create a free account using your email
 3. Once logged in, navigate to the [Account Settings/API Keys page](https://www.ipqualityscore.com/user/settings)
 4. Copy your **Default API Key**
@@ -50,8 +52,7 @@ To use this tool, you need a free API key from IPQualityScore. Here's how:
 }
 ```
 
-The free plan should be fine, in my testing these type of queries don't even drain your free tokens! This of course could change one day but for now take advantage of it..
-
+🆓 The free plan should be fine — in testing, these queries don’t even drain your free token balance. This could change in the future, but for now it’s a bonus!
 
 ## 🚀 Usage
 
@@ -75,11 +76,15 @@ Your API key is saved in a `config.json` file in the current directory if you ch
 A GUI table will display:
 
 | Proxy IP | Public IP | Location | ISP | Fraud Score | Proxy | VPN | Tor | Mobile | Recent Abuse | Bot Status |
-|----------|-----------|----------|-----|--------------|--------|------|-----|--------|----------------|-------------|
+|----------|-----------|----------|-----|-------------|--------|------|-----|--------|---------------|-------------|
 
 Rows are color-coded:
 - 🔴 Red = Fraud score ≥ 75 (high risk)
 - 🟡 Yellow = Fraud score ≥ 30 (medium risk)
+
+Double-clicking a row opens a popup showing the proxy's credentials and port.
+
+You can also export the results to a `.csv` file using the **Export to CSV** button.
 
 ## 📄 License
 

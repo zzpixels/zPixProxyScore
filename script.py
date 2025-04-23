@@ -1,8 +1,9 @@
 import requests
 import tkinter as tk
-from tkinter import ttk, scrolledtext
-from concurrent.futures import ThreadPoolExecutor
+from tkinter import ttk, scrolledtext, messagebox, filedialog
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from prettytable import PrettyTable
+import csv
 import os
 import json
 
@@ -16,6 +17,7 @@ USE_GUI = True
 
 results = []
 summary = {"total": 0, "high_risk": 0}
+failed_proxies = []
 api_key = DEFAULT_API_KEY
 
 def load_config():
@@ -29,7 +31,12 @@ def save_config(api_key):
         json.dump({"api_key": api_key}, f)
 
 def check_proxy(proxy):
-    ip, port, user, password = proxy.split(':')
+    try:
+        ip, port, user, password = proxy.split(':')
+    except ValueError:
+        failed_proxies.append(f"Malformed: {proxy}")
+        return
+
     proxy_ip = ip
     proxies = {
         'http': f'http://{user}:{password}@{ip}:{port}',
@@ -40,6 +47,7 @@ def check_proxy(proxy):
         geo_resp = requests.get(GEO_API_URL, proxies=proxies, timeout=10)
         geo_data = geo_resp.json()
         if geo_data.get('status') != 'success':
+            failed_proxies.append(proxy)
             return
 
         public_ip = geo_data['query']
@@ -65,18 +73,41 @@ def check_proxy(proxy):
                 fraud_data.get('tor', 'N/A'),
                 fraud_data.get('mobile', 'N/A'),
                 fraud_data.get('recent_abuse', 'N/A'),
-                fraud_data.get('bot_status', 'N/A')
+                fraud_data.get('bot_status', 'N/A'),
+                f"Username: {user}\nPassword: {password}\nPort: {port}"
             ]
             results.append(row)
             summary["total"] += 1
+        else:
+            failed_proxies.append(proxy)
 
     except Exception as e:
-        print(f"{proxy} => Error: {e}")
+        failed_proxies.append(proxy)
+
+def export_to_csv():
+    if not results:
+        messagebox.showinfo("Export", "No data to export.")
+        return
+
+    file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
+    if not file_path:
+        return
+
+    headers = ["Proxy IP", "Public IP", "Location", "ISP", "Fraud Score",
+               "Proxy", "VPN", "Tor", "Mobile", "Recent Abuse", "Bot Status"]
+
+    with open(file_path, mode='w', newline='', encoding='utf-8') as file:
+        writer = csv.writer(file)
+        writer.writerow(headers)
+        for row in results:
+            writer.writerow(row[:-1])  # exclude details
+
+    messagebox.showinfo("Export Complete", f"Data successfully exported to\n{file_path}")
 
 def display_gui_table():
     root = tk.Tk()
     root.title("zPix Proxy Score Checker Results")
-    root.geometry("1250x600")
+    root.geometry("1300x600")
 
     style = ttk.Style()
     style.theme_use("clam")
@@ -90,9 +121,14 @@ def display_gui_table():
                "Proxy", "VPN", "Tor", "Mobile", "Recent Abuse", "Bot Status"]
 
     tree = ttk.Treeview(frame, columns=columns, show='headings')
+    col_widths = {
+        "Proxy IP": 150, "Public IP": 150, "Location": 180, "ISP": 180,
+        "Fraud Score": 90, "Proxy": 60, "VPN": 60, "Tor": 60,
+        "Mobile": 60, "Recent Abuse": 100, "Bot Status": 100
+    }
     for col in columns:
         tree.heading(col, text=col)
-        tree.column(col, anchor=tk.W, width=110)
+        tree.column(col, anchor=tk.W, width=col_widths[col])
 
     vsb = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
     hsb = ttk.Scrollbar(frame, orient="horizontal", command=tree.xview)
@@ -102,6 +138,15 @@ def display_gui_table():
     hsb.pack(side='bottom', fill='x')
     tree.pack(fill='both', expand=True)
 
+    def show_details(event):
+        item = tree.identify_row(event.y)
+        if item:
+            idx = tree.index(item)
+            details = results[idx][-1]
+            messagebox.showinfo("Proxy Details", details)
+
+    tree.bind("<Double-1>", show_details)
+
     for row in results:
         fraud_score = row[4]
         tag = ""
@@ -109,14 +154,22 @@ def display_gui_table():
             tag = "high"
         elif fraud_score >= 30:
             tag = "medium"
-        tree.insert('', tk.END, values=row, tags=(tag,))
+        tree.insert('', tk.END, values=row[:-1], tags=(tag,))
 
     tree.tag_configure("high", background="#ffcccc")
     tree.tag_configure("medium", background="#fff0b3")
 
-    footer = ttk.Label(root, text=f"Proxies Checked: {summary['total']} | High Risk: {summary['high_risk']}",
-                       font=('Helvetica', 10, 'italic'))
-    footer.pack(side='bottom', pady=8)
+    footer_frame = ttk.Frame(root)
+    footer_frame.pack(side='bottom', fill='x', pady=8)
+
+    footer = ttk.Label(footer_frame, text=f"Proxies Checked: {summary['total']} | High Risk: {summary['high_risk']}", font=('Helvetica', 10, 'italic'))
+    footer.pack(side='left', padx=10)
+
+    export_btn = ttk.Button(footer_frame, text="Export to CSV", command=export_to_csv)
+    export_btn.pack(side='right', padx=10)
+
+    if failed_proxies:
+        messagebox.showwarning("Some Proxies Failed", f"The following proxies failed to check:\n\n" + "\n".join(failed_proxies))
 
     root.mainloop()
 
@@ -125,8 +178,15 @@ def display_terminal_table():
     table.field_names = ["Proxy IP", "Public IP", "Location", "ISP", "Fraud Score",
                          "Proxy", "VPN", "Tor", "Mobile", "Recent Abuse", "Bot Status"]
     for row in results:
-        table.add_row(row)
+        table.add_row(row[:-1])
     print(table)
+
+def show_loading_window():
+    load = tk.Tk()
+    load.title("Checking Proxies")
+    tk.Label(load, text="Checking proxies... This may take a moment.", font=("Helvetica", 12)).pack(padx=20, pady=20)
+    load.update()
+    return load
 
 def get_user_input():
     input_data = {}
@@ -171,8 +231,10 @@ def main():
         print("GUI disabled. Please modify the script to support CLI input if needed.")
         return
 
+    loading = show_loading_window()
     with ThreadPoolExecutor(max_workers=THREADS) as executor:
-        executor.map(check_proxy, proxies)
+        list(executor.map(check_proxy, proxies))
+    loading.destroy()
 
     display_gui_table() if USE_GUI else display_terminal_table()
 
