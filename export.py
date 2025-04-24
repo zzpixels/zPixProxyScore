@@ -1,86 +1,75 @@
 """
 Export Module
 
-This module handles exporting proxy check results to different formats
-and provides functionality for filtering and selecting proxies before export.
+Export functionality for proxy management application.
+Provides a GUI to filter, select and export proxy data in various formats.
 """
+
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import csv
 
-from utils import sort_by_column
 
-
-def export_to_csv(results):
+def sort_by_column(tv, col, reverse):
     """
-    Export proxy check results to a CSV file.
+    Sort treeview data based on the selected column.
 
     Args:
-        results (list): List of proxy check results
+        tv: Treeview widget
+        col: Column identifier to sort by
+        reverse: Boolean indicating whether to sort in reverse order
     """
-    if not results:
-        messagebox.showinfo("Export", "No data to export.")
-        return
+    data = [(tv.set(k, col), k) for k in tv.get_children("")]
+    try:
+        # Try numeric sorting first
+        data.sort(key=lambda t: float(t[0]), reverse=reverse)
+    except ValueError:
+        # Fall back to string sorting
+        data.sort(key=lambda t: t[0], reverse=reverse)
 
-    # Get file save location from user
-    file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv")])
-    if not file_path:
-        return
+    # Rearrange items in sorted positions
+    for index, (_, k) in enumerate(data):
+        tv.move(k, "", index)
 
-    headers = ["Proxy IP", "Public IP", "Location", "ISP", "Fraud Score",
-               "Proxy", "VPN", "Tor", "Mobile", "Recent Abuse", "Bot Status"]
-
-    # Write data to CSV file
-    with open(file_path, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file)
-        writer.writerow(headers)
-        for row in results:
-            writer.writerow(row[:-1])  # exclude details column
-
-    messagebox.showinfo("Export Complete", f"Data successfully exported to\n{file_path}")
+    # Configure the heading command to reverse sort on next click
+    tv.heading(col, command=lambda: sort_by_column(tv, col, not reverse))
 
 
 def open_export_window(tree, results):
     """
-    Open an advanced export window with filtering and selection capabilities.
+    Open a window to filter and export proxy data.
 
     Args:
-        tree (ttk.Treeview): The main application's Treeview with proxy data
-        results (list): List of proxy check results
+        tree: Original treeview widget containing proxy data
+        results: List of proxy data rows
     """
     original_rows = results
 
-    # Create export window
+    # Create and configure export window
     win = tk.Toplevel()
     win.title("Filter & Export Proxies")
-    win.geometry("950x580")
+    win.geometry("950x1050")
 
     # Track current sort state
     sort_col = None
     sort_reverse = False
 
-    # Create filter frame at top
+    # Create filter frame for controls
     filter_frame = ttk.Frame(win, padding=5)
     filter_frame.pack(fill="x")
 
-    # Create checkbox symbols and data structures for selection tracking
+    # Define checkbox display characters
+    # TODO: Find way to make it look better, janky but works
     unchecked, checked = "☐", "☑"
-    selected_iids = set()  # Set of selected item IDs
-    last_iid = None  # For shift-selection
 
-    def update_status():
-        """Update the status bar with selection counts"""
-        total = len(export_tree.get_children())
-        selected = len(selected_iids)
-        status_var.set(f"Selected: {selected} / {total}")
+    # Track selected rows with a set for O(1) lookups
+    selected_iids = set()
 
-    # === Selection controls ===
-
-    # Select All checkbox
+    # Select All checkbox functionality
     select_all_var = tk.BooleanVar(value=False)
 
     def on_select_all():
-        """Handle selection or deselection of all items"""
+        """Toggle selection state for all visible rows"""
         for iid in export_tree.get_children():
             if select_all_var.get():
                 selected_iids.add(iid)
@@ -95,7 +84,7 @@ def open_export_window(tree, results):
     ttk.Checkbutton(filter_frame, text="Select All", variable=select_all_var, command=on_select_all).pack(side="left",
                                                                                                           padx=(0, 5))
 
-    # Clear Selected button
+    # Clear Selected button functionality
     def on_clear_selected():
         """Clear all selections"""
         for iid in list(selected_iids):
@@ -107,66 +96,26 @@ def open_export_window(tree, results):
 
     ttk.Button(filter_frame, text="Clear Selected", command=on_clear_selected).pack(side="left", padx=(0, 15))
 
-    # === Filters ===
-
-    # Fraud Score filter
+    # Fraud score filter control
     ttk.Label(filter_frame, text="Max Fraud Score:").pack(side="left")
     max_fs_var = tk.StringVar(value="100")
 
-    # Validate function for fraud score input
     def on_validate(P):
-        """Validate that fraud score input is a number between 0-100"""
+        """Validate input for fraud score (0-100 range)"""
         return P == "" or (P.isdigit() and 0 <= int(P) <= 100)
 
     vcmd = (win.register(on_validate), '%P')
     fs_spin = tk.Spinbox(filter_frame, from_=0, to=100, width=5, textvariable=max_fs_var,
                          validate='key', validatecommand=vcmd)
     fs_spin.pack(side="left", padx=(0, 15))
-    fs_spin.bind('<Return>', lambda e: 'break')  # Prevent Enter from triggering unwanted actions
 
-    # Refresh function to update the view based on filters
-    def refresh(*args):
-        """Refresh the treeview with filtered results"""
-        export_tree.delete(*export_tree.get_children())
-        selected_iids.clear()
-        cols = list(tree["columns"])
+    # Prevent default Enter key behavior
+    fs_spin.bind('<Return>', lambda e: 'break')
 
-        # Apply filters to each row
-        for idx, full_row in enumerate(original_rows):
-            # Apply fraud score filter
-            try:
-                max_val = int(max_fs_var.get()) if max_fs_var.get() != "" else 0
-            except ValueError:
-                max_val = 0
-            if full_row[4] > max_val:
-                continue
+    # Auto-refresh on value change
+    max_fs_var.trace_add("write", lambda *a: refresh())
 
-            # Apply boolean filters (Proxy, VPN, etc.)
-            ok = True
-            for col, var in bool_vars.items():
-                v = var.get()
-                if v != "All" and str(full_row[cols.index(col)]) != v:
-                    ok = False
-                    break
-            if not ok:
-                continue
-
-            # Add filtered row to tree
-            export_tree.insert("", tk.END, iid=str(idx),
-                               values=[checked if select_all_var.get() else unchecked] + full_row[:-1],
-                               tags=("selected",) if select_all_var.get() else ())
-            if select_all_var.get():
-                selected_iids.add(str(idx))
-
-        # Reapply last sort if any
-        if sort_col:
-            sort_by_column(export_tree, sort_col, not sort_reverse)
-        update_status()
-
-    # Connect fraud score changes to refresh
-    max_fs_var.trace_add("write", refresh)
-
-    # Boolean filters (True/False/All dropdowns)
+    # Boolean column filters (Proxy, VPN, etc.)
     bool_cols = ["Proxy", "VPN", "Tor", "Mobile", "Recent Abuse", "Bot Status"]
     bool_vars = {}
     for col in bool_cols:
@@ -175,15 +124,20 @@ def open_export_window(tree, results):
         cb = ttk.Combobox(filter_frame, textvariable=var,
                           values=["All", "True", "False"], width=8, state="readonly")
         cb.pack(side="left", padx=(0, 10))
-        var.trace_add("write", refresh)  # Connect filter changes to refresh
+
+        # Auto-refresh on selection change
+        var.trace_add("write", lambda *a: refresh())
         bool_vars[col] = var
 
-    # === Setup Treeview for displaying filtered results ===
+    # Configure export treeview
     cols = list(tree["columns"])
     display_cols = ["Select"] + cols
     export_tree = ttk.Treeview(win, columns=display_cols, show="headings", selectmode="none")
 
-    # Configure selection highlighting
+    # For shift-click range selection
+    last_iid = None
+
+    # Configure the 'selected' row appearance
     export_tree.tag_configure("selected", background="#b3cbff")
 
     # Configure columns and capture sort state
@@ -193,7 +147,7 @@ def open_export_window(tree, results):
             export_tree.column(col, width=50, anchor="center")
         else:
             def handler(c=col):
-                """Handle column click for sorting"""
+                """Column header click handler for sorting"""
                 nonlocal sort_col, sort_reverse
                 sort_by_column(export_tree, c, sort_reverse)
                 sort_col, sort_reverse = c, not sort_reverse
@@ -202,22 +156,26 @@ def open_export_window(tree, results):
             export_tree.column(col, width=tree.column(col, option="width"))
     export_tree.pack(fill="both", expand=True, pady=5, padx=5)
 
-    # Status bar at bottom
+    # Status bar to display selection count
     status_var = tk.StringVar()
     status_label = ttk.Label(win, textvariable=status_var, anchor='w', font=('Helvetica', 10, 'italic'))
     status_label.pack(side='bottom', fill='x', padx=5, pady=2)
 
-    # === Event handlers for selection ===
+    def update_status():
+        """Update the status bar with current selection info"""
+        total = len(export_tree.get_children())
+        selected = len(selected_iids)
+        status_var.set(f"Selected: {selected} / {total}")
 
-    # Handle row click for selection
+    # Row click handler for selection toggling
     def on_tree_click(event):
-        """Handle mouse click on tree rows for selection"""
+        """Handle row click to toggle selection state"""
         nonlocal last_iid
         iid = export_tree.identify_row(event.y)
         if not iid:
             return
 
-        # Handle shift+click for range selection
+        # Support shift-click for range selection
         if event.state & 0x0001 and last_iid and iid != last_iid:
             children = export_tree.get_children()
             start = children.index(last_iid)
@@ -227,7 +185,7 @@ def open_export_window(tree, results):
                 export_tree.item(j, tags=("selected",))
                 export_tree.set(j, 'Select', checked)
         else:
-            # Toggle single item selection
+            # Toggle single row selection
             if iid in selected_iids:
                 selected_iids.remove(iid)
                 export_tree.item(iid, tags=())
@@ -236,17 +194,18 @@ def open_export_window(tree, results):
                 selected_iids.add(iid)
                 export_tree.item(iid, tags=("selected",))
                 export_tree.set(iid, 'Select', checked)
+
         last_iid = iid
 
-        # Update select all checkbox state
+        # Update "Select All" checkbox state based on selection
         select_all_var.set(all(i in selected_iids for i in export_tree.get_children()))
         update_status()
 
     export_tree.bind("<Button-1>", on_tree_click)
 
-    # Handle Ctrl+A for select all
+    # Keyboard shortcuts
     def on_ctrl_a(event):
-        """Handle Ctrl+A keyboard shortcut to select all"""
+        """Handle Ctrl+A to select all rows"""
         select_all_var.set(True)
         on_select_all()
         update_status()
@@ -255,39 +214,238 @@ def open_export_window(tree, results):
     export_tree.bind("<Control-a>", on_ctrl_a)
     export_tree.bind("<Control-A>", on_ctrl_a)
 
-    # Initial refresh to populate the tree
+    def refresh():
+        """
+        Refresh the treeview with filtered data.
+        Applies all active filters and repopulates the export tree.
+        """
+        export_tree.delete(*export_tree.get_children())
+        selected_iids.clear()
+
+        for idx, full_row in enumerate(original_rows):
+            # Apply fraud score filter
+            try:
+                max_val = int(max_fs_var.get()) if max_fs_var.get() != "" else 0
+            except ValueError:
+                max_val = 0
+
+            if full_row[4] > max_val:
+                continue
+
+            # Apply boolean filters (proxy, VPN, etc.)
+            ok = True
+            for col, var in bool_vars.items():
+                v = var.get()
+                if v != "All" and str(full_row[cols.index(col)]) != v:
+                    ok = False
+                    break
+
+            if not ok:
+                continue
+
+            # Insert row that passes all filters
+            export_tree.insert("", tk.END, iid=str(idx),
+                               values=[checked if select_all_var.get() else unchecked] + full_row[:-1],
+                               tags=("selected",) if select_all_var.get() else ())
+
+            if select_all_var.get():
+                selected_iids.add(str(idx))
+
+        # Reapply last sort if active
+        if sort_col:
+            sort_by_column(export_tree, sort_col, not sort_reverse)
+
+        update_status()
+
+    # Initial data load
     refresh()
 
-    # === Button frame for actions ===
+    # Column selection for export format
+    column_frame = ttk.LabelFrame(win, text="CSV Format Columns", padding=10)
+    column_frame.pack(fill="x", padx=5, pady=5)
+
+    # Define available columns for export
+    column_vars = {}
+    column_names = ["Proxy IP", "Public IP", "Location", "ISP", "Fraud Score",
+                    "Proxy", "VPN", "Tor", "Mobile", "Recent Abuse", "Bot Status"]
+
+    # Create a grid of checkboxes for column selection
+    col_checkboxes_frame = ttk.Frame(column_frame)
+    col_checkboxes_frame.pack(fill="x", expand=True)
+
+    for i, col_name in enumerate(column_names):
+        # All selected by default
+        var = tk.BooleanVar(value=True)
+
+        column_vars[col_name] = var
+        cb = ttk.Checkbutton(col_checkboxes_frame, text=col_name, variable=var)
+
+        # 3 columns of checkboxes
+        row, col = divmod(i, 3)
+        cb.grid(row=row, column=col, sticky="w", padx=5, pady=2)
+
+    # Buttons to select/deselect all columns
+    col_btn_frame = ttk.Frame(column_frame)
+    col_btn_frame.pack(fill="x", pady=(10, 0))
+
+    def select_all_columns():
+        """Select all export columns"""
+        for var in column_vars.values():
+            var.set(True)
+
+    def deselect_all_columns():
+        """Deselect all export columns"""
+        for var in column_vars.values():
+            var.set(False)
+
+    ttk.Button(col_btn_frame, text="Select All Columns", command=select_all_columns).pack(side="left", padx=5)
+    ttk.Button(col_btn_frame, text="Deselect All Columns", command=deselect_all_columns).pack(side="left")
+
+    # Export format selection frame
+    format_frame = ttk.LabelFrame(win, text="Export Format", padding=10)
+    format_frame.pack(fill="x", padx=5, pady=5)
+
+    format_var = tk.StringVar(value="txt")
+    ttk.Radiobutton(format_frame, text="Raw Text Format", variable=format_var, value="txt").pack(anchor="w")
+    ttk.Radiobutton(format_frame, text="CSV Format", variable=format_var, value="csv").pack(anchor="w")
+
+    # Template configuration for text format
+    template_frame = ttk.LabelFrame(format_frame, text="Raw Text Format Template", padding=5)
+    template_frame.pack(fill="x", pady=(5, 0), expand=True)
+
+    # Default template pattern
+    template_var = tk.StringVar(value="{Proxy IP}:{Port}:{Username}:{Password}")
+    template_entry = ttk.Entry(template_frame, textvariable=template_var, width=60)
+    template_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
+
+    # Help button with template placeholders
+    def show_template_help():
+        """Show dialog with template placeholder information"""
+        help_text = (
+            "Available placeholders:\n"
+            "{Proxy IP} - Proxy IP address\n"
+            "{Public IP} - Public IP\n"
+            "{Location} - Location\n"
+            "{ISP} - ISP\n"
+            "{Fraud Score} - Fraud Score\n"
+            "{Proxy} - Is Proxy\n"
+            "{VPN} - Is VPN\n"
+            "{Tor} - Is Tor\n"
+            "{Mobile} - Is Mobile\n"
+            "{Recent Abuse} - Recent Abuse\n"
+            "{Bot Status} - Bot Status\n"
+            "{Port} - Port number\n"
+            "{Username} - Username\n"
+            "{Password} - Password\n\n"
+            "Example: {Proxy IP}:{Port}:{Username}:{Password}"
+        )
+        messagebox.showinfo("Template Help", help_text)
+
+    ttk.Button(template_frame, text="?", width=3, command=show_template_help).pack(side="right")
+
+    # Button frame for export/cancel actions
     btn_frame = ttk.Frame(win, padding=5)
     btn_frame.pack(fill="x")
 
     def do_export():
-        """Export selected proxies to a file"""
+        """
+        Perform the export operation with selected format and options.
+        Validates selections and exports to user-selected file.
+        """
+        # Validate selections
         if not selected_iids:
             messagebox.showinfo("No selection", "Select at least one proxy.")
             return
 
-        # Get file path from user
-        path = filedialog.asksaveasfilename(defaultextension=".txt",
-                                            filetypes=[("Text", "*.txt"), ("CSV", "*.csv")])
-        if not path:
+        selected_columns = [col for col in column_names if column_vars[col].get()]
+        if not selected_columns and format_var.get() == "csv":
+            messagebox.showinfo("No columns", "Select at least one column to export.")
             return
 
-        # Write selected proxies to file
-        with open(path, "w", newline="") as f:
-            for iid in selected_iids:
-                row = original_rows[int(iid)]
-                ip = row[0]
-                # Parse details into a dictionary
-                parts = dict(line.split(":", 1) for line in row[-1].splitlines())
-                # Format as IP:PORT:USER:PASS
-                line = f"{ip}:{parts['Port'].strip()}:{parts['Username'].strip()}:{parts['Password'].strip()}"
-                f.write(line + "\n")
+        # Configure save file dialog
+        default_ext = "." + format_var.get()
+        filetypes = [("All Files", "*.*")]
 
-        messagebox.showinfo("Exported", f"Wrote {len(selected_iids)} proxies to {path}")
+        path = filedialog.asksaveasfilename(
+            defaultextension=default_ext,
+            filetypes=filetypes,
+            initialfile=f"proxy_export{default_ext}"
+        )
+
+        if not path:
+            # User canceled
+            return
+
+        export_format = path.split('.')[-1].lower()
+
+        if export_format == "csv":
+            # CSV export logic
+            with open(path, "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+
+                # Write header row
+                writer.writerow(selected_columns)
+
+                # Write data rows
+                for iid in selected_iids:
+                    row = original_rows[int(iid)]
+
+                    # Extract credentials from details string
+                    details_dict = {}
+                    details_text = row[-1]  # Get the details string
+                    for line in details_text.splitlines():
+                        if ":" in line:
+                            key, value = line.split(":", 1)
+                            details_dict[key.strip()] = value.strip()
+
+                    # Create a row with only selected columns
+                    output_row = []
+                    for i, col in enumerate(column_names):
+                        if col in selected_columns:
+                            output_row.append(row[i])
+
+                    writer.writerow(output_row)
+
+            count = len(selected_iids)
+            messagebox.showinfo("Export Complete", f"Exported {count} proxies to CSV file.")
+
+        else:
+            # Text export with template
+            template = template_var.get()
+            if not template:
+                template = "{Proxy IP}:{Port}:{Username}:{Password}"  # Default
+
+            with open(path, "w", encoding="utf-8") as f:
+                for iid in selected_iids:
+                    row = original_rows[int(iid)]
+
+                    # Create a mapping of placeholders to values
+                    values_dict = {}
+
+                    # Add all standard columns
+                    for i, col in enumerate(column_names):
+                        values_dict[col] = row[i]
+
+                    # Extract credentials from details
+                    details_text = row[-1]
+                    for line in details_text.splitlines():
+                        if ":" in line:
+                            key, value = line.split(":", 1)
+                            values_dict[key.strip()] = value.strip()
+
+                    # Replace placeholders in template with values
+                    line = template
+                    for key, value in values_dict.items():
+                        line = line.replace("{" + key + "}", str(value))
+
+                    f.write(line + "\n")
+
+            count = len(selected_iids)
+            messagebox.showinfo("Export Complete", f"Exported {count} proxies to text file.")
+
+        # Close export window after successful export
         win.destroy()
 
-    # Add export and cancel buttons
+    # Add action buttons
     ttk.Button(btn_frame, text="Export Selected", command=do_export).pack(side="right", padx=5)
     ttk.Button(btn_frame, text="Cancel", command=win.destroy).pack(side="right")

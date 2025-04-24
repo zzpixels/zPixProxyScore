@@ -9,7 +9,7 @@ from tkinter import ttk, scrolledtext, messagebox
 
 from config import load_config, save_config, DEFAULT_API_KEY
 from utils import sort_by_column
-from export import export_to_csv, open_export_window
+from export import open_export_window
 
 
 def get_user_input():
